@@ -44,9 +44,15 @@ it never reads notifications. all-files access is what lets it delete a file it 
 not create.
 
 then bind keys: settings > shortcut keys > pick the key and press type > apps > titan hooks.
-or over adb (func2 = top key, func1 = bottom key):
+or over adb (func1 = top key, func2 = bottom key; the bottom key can bounce into a
+double press, so bind its double the same as its short):
 
+    adb shell settings put system func1_double_press_package org.heatsync.titanhooks
+    adb shell settings put system func1_double_press_activity org.heatsync.titanhooks.MusicDelete
+    adb shell settings put system func2_short_press_package org.heatsync.titanhooks
+    adb shell settings put system func2_short_press_activity org.heatsync.titanhooks.MediaNext
     adb shell settings put system func2_double_press_package org.heatsync.titanhooks
-    adb shell settings put system func2_double_press_activity org.heatsync.titanhooks.MusicDelete
-    adb shell settings put system func1_short_press_package org.heatsync.titanhooks
-    adb shell settings put system func1_short_press_activity org.heatsync.titanhooks.MediaNext
+    adb shell settings put system func2_double_press_activity org.heatsync.titanhooks.MediaNext
+
+the key handler reads these on every press. the mode radio (shortcut settings vs
+programmable key) is only applied when saved from the phone's own settings screen.
