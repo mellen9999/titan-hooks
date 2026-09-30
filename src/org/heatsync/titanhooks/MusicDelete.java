@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
+import android.media.session.PlaybackState;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -46,6 +47,9 @@ public final class MusicDelete extends Activity {
     for (MediaController c : msm.getActiveSessions(new ComponentName(this, MediaListener.class)))
       if (PLAYER.equals(c.getPackageName())) player = c;
     if (player == null) { say("musicolet not running"); return; }
+    // only the track actually playing may be deleted: a paused musicolet behind youtube music is not it
+    PlaybackState st = player.getPlaybackState();
+    if (st == null || st.getState() != PlaybackState.STATE_PLAYING) { say("musicolet not playing"); return; }
     MediaMetadata md = player.getMetadata();
     if (md == null) { say("nothing playing"); return; }
     String title = str(md, MediaMetadata.METADATA_KEY_TITLE);
