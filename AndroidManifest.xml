@@ -1,18 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.heatsync.titanhooks"
-    android:versionCode="2"
-    android:versionName="0.2">
+    android:versionCode="3"
+    android:versionName="0.3">
   <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="34" />
   <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
   <application android:label="titan hooks" android:hasCode="true">
     <!-- no ui; each hook is one exported activity the oem side-key launcher can name -->
+    <!-- translucent, not nodisplay: this one stays alive while the skip lands, and android
+         kills a nodisplay activity that is still around after onResume. showWhenLocked lets
+         the side key work from the lock screen -->
     <activity android:name=".MusicDelete"
         android:label="music delete"
         android:exported="true"
         android:excludeFromRecents="true"
-        android:theme="@android:style/Theme.NoDisplay">
+        android:showWhenLocked="true"
+        android:theme="@android:style/Theme.Translucent.NoTitleBar">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
@@ -22,6 +26,7 @@
         android:label="next track"
         android:exported="true"
         android:excludeFromRecents="true"
+        android:showWhenLocked="true"
         android:theme="@android:style/Theme.NoDisplay" />
     <!-- holds notification access (unlocks media sessions) and watches youtube music -->
     <service android:name=".MediaListener"
