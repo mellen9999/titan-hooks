@@ -56,3 +56,9 @@ double press, so bind its double the same as its short):
 
 the key handler reads these on every press. the mode radio (shortcut settings vs
 programmable key) is only applied when saved from the phone's own settings screen.
+
+both hooks run from the lock screen while it is lit. with the screen off the phone's key
+handler refuses to launch any app (hard-coded in its firmware), so neither hook fires;
+the only screen-off option is the "programmable key > media" mode, which turns the key
+into a plain play/pause button (double press = next, handled by the player) and loses
+single-press skip.
