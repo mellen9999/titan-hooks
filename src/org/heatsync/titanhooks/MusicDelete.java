@@ -7,7 +7,6 @@ import android.content.ContentUris;
 import android.database.Cursor;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
-import android.media.session.MediaSession;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.net.Uri;
@@ -25,14 +24,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-// side key -> this: skip musicolet to the next track, delete the one it was playing from the
-// synced music folder, log it. syncthing carries the delete to every other machine.
+// side key -> this: delete the track musicolet is playing from the synced music folder, log
+// it, and leave musicolet exactly one track on. syncthing carries the delete everywhere else.
 public final class MusicDelete extends Activity {
   static final String PLAYER = "in.krosbits.musicolet";
   static final File MUSIC = new File(Environment.getExternalStorageDirectory(), "Music");
   static final File LOG = new File(MUSIC, ".deleted.log");
   static final Uri AUDIO = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-  static final long SKIP_WAIT_MS = 3000;
+  static final long MOVE_WAIT_MS = 4000;
   static final long POLL_MS = 50;
 
   final Handler main = new Handler(Looper.getMainLooper());
@@ -83,30 +82,32 @@ public final class MusicDelete extends Activity {
     File f = new File(paths.get(0));
     if (!f.getCanonicalPath().startsWith(MUSIC.getCanonicalPath() + "/")) { say("refusing: outside Music"); finish(); return; }
 
-    // musicolet drops a vanished track from its queue and advances on its own; deleting before
-    // our skip lands made it advance twice. so skip, wait until it is on another track, then delete.
+    // musicolet re-reads its library ~1s after a file vanishes and drops it from the queue
+    // without moving its own position back: delete a track behind the one playing and it lands
+    // one past the next. so delete while the doomed track is still current, let that drop be
+    // the one skip, and skip ourselves only if musicolet never moves off it.
+    if (!delete(f, ids.get(0)[0])) { finish(); return; }
     final MediaController p = player;
-    final long queueItem = st.getActiveQueueItemId();
     final String was = title + "\n" + artist + "\n" + album;
-    final long deadline = SystemClock.uptimeMillis() + SKIP_WAIT_MS;
-    p.getTransportControls().skipToNext();
+    final long deadline = SystemClock.uptimeMillis() + MOVE_WAIT_MS;
     main.post(new Runnable() {
       @Override public void run() {
         Runnable again = this;
         guard(() -> {
-          if (moved(p, queueItem, was)) { delete(f, ids.get(0)[0]); finish(); }
-          else if (SystemClock.uptimeMillis() > deadline) { say("skip did not land, kept: " + f.getName()); finish(); }
+          if (moved(p, was)) finish();
+          else if (SystemClock.uptimeMillis() > deadline) {
+            p.getTransportControls().skipToNext();
+            say("musicolet kept it, skipped");
+            finish();
+          }
           else main.postDelayed(again, POLL_MS);
         });
       }
     });
   }
 
-  static boolean moved(MediaController p, long queueItem, String was) {
-    PlaybackState st = p.getPlaybackState();
-    if (queueItem != MediaSession.QueueItem.UNKNOWN_ID && st != null
-        && st.getActiveQueueItemId() != MediaSession.QueueItem.UNKNOWN_ID)
-      return st.getActiveQueueItemId() != queueItem;
+  // tags are unique here: find() refuses a title+artist+album shared by two files
+  static boolean moved(MediaController p, String was) {
     MediaMetadata md = p.getMetadata();
     if (md == null) return false;
     String now = str(md, MediaMetadata.METADATA_KEY_TITLE) + "\n" + str(md, MediaMetadata.METADATA_KEY_ARTIST)
@@ -114,9 +115,9 @@ public final class MusicDelete extends Activity {
     return !now.equals(was);
   }
 
-  void delete(File f, long id) throws Exception {
+  boolean delete(File f, long id) throws Exception {
     getContentResolver().delete(ContentUris.withAppendedId(AUDIO, id), null, null);
-    if (f.exists() && !f.delete()) { say("delete failed: " + f.getName()); return; }
+    if (f.exists() && !f.delete()) { say("delete failed: " + f.getName()); return false; }
     File dir = f.getParentFile();
     String[] left = dir.list();
     if (left != null && left.length == 0) dir.delete();
@@ -124,6 +125,7 @@ public final class MusicDelete extends Activity {
       w.write(new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date()) + " titan:" + f.getPath() + "\n");
     }
     say("deleted: " + f.getName());
+    return true;
   }
 
   // media store already indexes Music with tags; one query beats probing files

@@ -11,8 +11,8 @@ is a notification listener the system calls into on media state changes.
 sends the media-next key to whatever is playing. works for every player.
 
 **music delete** — `org.heatsync.titanhooks.MusicDelete`
-skips musicolet to the next track and deletes the one that was playing from the
-`Music` folder, which syncthing then removes from every other machine. the file is
+deletes the track musicolet is playing from the `Music` folder (musicolet moves on
+to the next track by itself, exactly once), which syncthing then removes from every other machine. the file is
 found by title + artist (+ album) in the media store, and it refuses when the match
 is missing, ambiguous, or outside `Music`. every delete is appended to
 `Music/.deleted.log`. a toast says what happened.
